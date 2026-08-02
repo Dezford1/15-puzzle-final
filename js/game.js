@@ -22,6 +22,7 @@ const el = {
   board:     document.getElementById('board'),
   mode:      document.getElementById('mode'),
   shuffle:   document.getElementById('shuffle'),
+  reset:     document.getElementById('reset'),
   magic:     document.getElementById('magic'),
   magicLeft: document.getElementById('magic-left'),
   moves:     document.getElementById('moves'),
@@ -31,6 +32,7 @@ const el = {
 
 let moves      = 0;
 let magicLeft  = CONFIG.magicUses;
+let openingBoard = null;  // snapshot of the shuffle, so Reset can replay it
 let startTime  = null;    // null until the first move
 let tickHandle = null;
 let finished   = false;
@@ -169,7 +171,16 @@ document.addEventListener('keydown', e => {
 });
 
 // ---- buttons -----------------------------------------------------------
+// Shuffle = a brand new puzzle. Reset = another attempt at the same one,
+// so a player can compare their move count on identical starting tiles.
 el.shuffle.addEventListener('click', newGame);
+
+el.reset.addEventListener('click', () => {
+  if (!openingBoard) return;
+  Puzzle.setBoard(openingBoard);
+  clearStats();
+  render();
+});
 
 el.magic.addEventListener('click', () => {
   if (finished || magicLeft === 0) return;
@@ -184,13 +195,18 @@ el.mode.addEventListener('change', () => {
 });
 
 // ---- lifecycle ---------------------------------------------------------
-function newGame() {
-  Puzzle.shuffle(CONFIG.shuffleMoves);
+function clearStats() {
   moves     = 0;
   magicLeft = CONFIG.magicUses;
   finished  = false;
   el.status.textContent = '';
   resetTimer();
+}
+
+function newGame() {
+  Puzzle.shuffle(CONFIG.shuffleMoves);
+  openingBoard = Puzzle.getBoard();   // remember it so Reset can restore it
+  clearStats();
   render();
 }
 
