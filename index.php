@@ -167,6 +167,9 @@
 <script src="js/storage.js"></script>
 <script src="js/leaderboard.js"></script>
 
+<!-- Bridges game.js to the API. After storage.js, before game.js. -->
+<script src="js/scores.js"></script>
+
 <script src="js/puzzle.js"></script>
 
 <script src="js/game.js"></script>
