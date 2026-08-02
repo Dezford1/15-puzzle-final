@@ -164,6 +164,7 @@
 </footer>
 
 <!-- Scripts -->
+<script src="js/storage.js"></script>
 <script src="js/leaderboard.js"></script>
 
 <script src="js/puzzle.js"></script>
