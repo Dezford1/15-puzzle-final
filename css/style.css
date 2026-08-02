@@ -1,48 +1,255 @@
-/* style.css — PERSON B OWNS THIS FILE.
- *
- * Person A put a bare minimum here just to make the board visible while
- * building the game logic. Replace it freely: responsive layout, theme
- * image sets for .mode-theme-a / .mode-theme-b, accessible focus states.
- *
- * Techniques used here, with W3Schools reference pages:
- *   CSS Grid              https://www.w3schools.com/css/css_grid.asp
- *   grid-template-columns https://www.w3schools.com/cssref/pr_grid-template-columns.php
- *   Responsive design     https://www.w3schools.com/css/css_rwd_intro.asp
- *   Background sizing     https://www.w3schools.com/cssref/css3_pr_background-size.php
- *
- * The only things game.js depends on are these class names:
- *   .board, .tile, .tile.blank, .tile.home,
- *   .mode-numbers, .mode-theme-a, .mode-theme-b
- */
+/* ==========================================
+   RESET
+========================================== */
 
-body {
-  font-family: system-ui, sans-serif;
-  margin: 2rem;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.board {
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(to bottom, #87ceeb, #e0f7fa);
+  color: #333;
+  min-height: 100vh;
+}
+
+/* ==========================================
+   HEADER
+========================================== */
+
+header {
+  text-align: center;
+  background: #0096c7;
+  color: white;
+  padding: 2rem 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  font-size: 1.2rem;
+}
+
+/* ==========================================
+   MAIN
+========================================== */
+
+main {
+  width: 90%;
+  max-width: 1200px;
+  margin: 30px auto;
+}
+
+/* ==========================================
+   SECTION CARDS
+========================================== */
+
+section {
+  background: white;
+  margin-bottom: 25px;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+section h2 {
+  color: #0077b6;
+  margin-bottom: 10px;
+}
+
+section p {
+  line-height: 1.6;
+}
+
+/* ==========================================
+   CONTROLS
+========================================== */
+
+#controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.control-group label {
+  margin-bottom: 6px;
+  font-weight: bold;
+}
+
+select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+/* ==========================================
+   BUTTONS
+========================================== */
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+button {
+  background: #0077b6;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 22px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #023e8a;
+  transform: translateY(-2px);
+}
+
+/* ==========================================
+   PUZZLE BOARD
+========================================== */
+
+#game {
+  display: flex;
+  justify-content: center;
+}
+
+#board {
+  width: 520px;
+  height: 520px;
+  background: #fff9db;
+  border: 6px solid #0096c7;
+  border-radius: 15px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
   gap: 4px;
-  width: min(90vw, 400px);
-  background: #ddd;
   padding: 4px;
 }
 
-.tile {
-  aspect-ratio: 1;
-  font-size: 1.5rem;
-  font-family: inherit;
-  border: 0;
-  background: #4a7ebb;
-  color: #fff;
-  cursor: pointer;
-  background-size: 400% 400%;   /* 4x4 slice of a theme image */
+/* ==========================================
+   STATS
+========================================== */
+
+#stats {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
 }
 
-.tile.home  { background-color: #35608f; }
-.tile.blank { background: transparent; outline: 2px dashed #999; cursor: default; }
+.stat-card {
+  background: #caf0f8;
+  width: 180px;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
 
-/* Numbers mode shows digits only; image modes hide them. */
-.mode-theme-a .tile,
-.mode-theme-b .tile { color: transparent; }
+.stat-card h3 {
+  color: #0077b6;
+  margin-bottom: 10px;
+}
+
+.stat-card p {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* ==========================================
+   STATUS
+========================================== */
+
+#game-status {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #0077b6;
+}
+
+/* ==========================================
+   LEADERBOARD
+========================================== */
+
+#leaderboard {
+  overflow-x: auto;
+}
+
+#leaderboard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#leaderboard th {
+  background: #0096c7;
+  color: white;
+  padding: 12px;
+}
+
+#leaderboard td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+#leaderboard tr:nth-child(even) {
+  background: #f7f7f7;
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+
+footer {
+  background: #0096c7;
+  color: white;
+  text-align: center;
+  padding: 20px;
+  margin-top: 40px;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 768px) {
+  #controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-group {
+    justify-content: center;
+  }
+
+  #board {
+    width: 340px;
+    height: 340px;
+  }
+
+  .stat-card {
+    width: 140px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+  }
+}
