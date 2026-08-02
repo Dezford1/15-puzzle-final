@@ -125,11 +125,33 @@
 
     <section id="leaderboard" aria-label="High scores">
 
-        <h2>🏆 Leaderboard</h2>
+    <h2>🏆 Leaderboard</h2>
 
-        <!-- scores.js will populate this -->
+    <table>
 
-    </section>
+        <thead>
+
+            <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Theme</th>
+                <th>Moves</th>
+                <th>Time</th>
+            </tr>
+
+        </thead>
+
+        <tbody id="leaderboard-body">
+
+            <tr>
+                <td colspan="5">Loading scores...</td>
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</section>
 
 </main>
 
@@ -142,7 +164,7 @@
 </footer>
 
 <!-- Scripts -->
-<script src="js/scores.mock.js"></script>
+<script src="js/leaderboard.js"></script>
 
 <script src="js/puzzle.js"></script>
 
