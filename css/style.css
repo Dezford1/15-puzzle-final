@@ -1,0 +1,48 @@
+/* style.css — PERSON B OWNS THIS FILE.
+ *
+ * Person A put a bare minimum here just to make the board visible while
+ * building the game logic. Replace it freely: responsive layout, theme
+ * image sets for .mode-theme-a / .mode-theme-b, accessible focus states.
+ *
+ * Techniques used here, with W3Schools reference pages:
+ *   CSS Grid              https://www.w3schools.com/css/css_grid.asp
+ *   grid-template-columns https://www.w3schools.com/cssref/pr_grid-template-columns.php
+ *   Responsive design     https://www.w3schools.com/css/css_rwd_intro.asp
+ *   Background sizing     https://www.w3schools.com/cssref/css3_pr_background-size.php
+ *
+ * The only things game.js depends on are these class names:
+ *   .board, .tile, .tile.blank, .tile.home,
+ *   .mode-numbers, .mode-theme-a, .mode-theme-b
+ */
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: min(90vw, 400px);
+  background: #ddd;
+  padding: 4px;
+}
+
+.tile {
+  aspect-ratio: 1;
+  font-size: 1.5rem;
+  font-family: inherit;
+  border: 0;
+  background: #4a7ebb;
+  color: #fff;
+  cursor: pointer;
+  background-size: 400% 400%;   /* 4x4 slice of a theme image */
+}
+
+.tile.home  { background-color: #35608f; }
+.tile.blank { background: transparent; outline: 2px dashed #999; cursor: default; }
+
+/* Numbers mode shows digits only; image modes hide them. */
+.mode-theme-a .tile,
+.mode-theme-b .tile { color: transparent; }

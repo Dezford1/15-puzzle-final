@@ -1,0 +1,11 @@
+# OS / editor cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+
+# Local DB credentials — never commit real ones
+api/db.local.php
+
+# Scratch reference, not part of the submission
+reference/
