@@ -67,25 +67,39 @@ const Puzzle = (function () {
     return board.every((tile, i) => tile === SOLVED[i]);
   }
 
-  // ---- TODO #1: shuffle ------------------------------------------------
+  // ---- shuffle ---------------------------------------------------------
   // Scramble the board so it is ALWAYS solvable.
   //
-  // Do NOT randomly shuffle the array. Exactly half of the 16! possible
-  // arrangements can never be solved, so a plain shuffle hands the player
-  // an impossible board about half the time.
+  // Deliberately NOT a random shuffle of the array. Exactly half of the 16!
+  // possible arrangements can never be solved, so shuffling directly would
+  // hand the player an impossible board about half the time.
   //
-  // Safe method (this is why your spec says "Shuffle Moves: 240"):
-  //   1. board = SOLVED.slice()
-  //   2. repeat `steps` times:
-  //        - pick a random index from legalTargets()
-  //        - don't pick the square the blank just came from, or it
-  //          oscillates back and forth and barely scrambles
-  //        - moveBlankTo(that index)
-  //   3. if it happens to land on solved, shuffle again
-  //
-  // Only legal moves are ever made, so the board stays solvable by definition.
+  // Instead we start from the solved board and walk away from it using only
+  // moves the player is allowed to make. Anything reachable that way is
+  // reachable back, so the result is solvable by construction. This is why
+  // the spec specifies "Shuffle Moves: 240".
   function shuffle(steps = 240) {
-    // TODO: implement
+    board = SOLVED.slice();
+
+    // Where the blank sat one step ago. Without this the walk keeps
+    // undoing itself — left, right, left, right — and barely scrambles.
+    let previous = -1;
+
+    for (let step = 0; step < steps; step++) {
+      const from = blankIndex();
+
+      let options = legalTargets().filter(i => i !== previous);
+      // A corner has only 2 exits; if one was the way back, take what's left.
+      if (options.length === 0) options = legalTargets();
+
+      const target = options[Math.floor(Math.random() * options.length)];
+      previous = from;
+      moveBlankTo(target);
+    }
+
+    // Astronomically unlikely at 240 steps, but a shuffle that hands back
+    // the solved board is still a bug.
+    if (isSolved()) shuffle(steps);
   }
 
   // ---- TODO #2: magic --------------------------------------------------
@@ -105,11 +119,24 @@ const Puzzle = (function () {
     return false;
   }
 
+  // Restore a previously captured arrangement (used by the Reset button,
+  // so the player can retry the same puzzle instead of a brand new one).
+  // Validated, because silently accepting a malformed array would produce
+  // a board that looks fine but can never be solved.
+  function setBoard(arrangement) {
+    if (!Array.isArray(arrangement) || arrangement.length !== CELLS) return false;
+    const sorted = [...arrangement].sort((a, b) => a - b);
+    if (!sorted.every((v, i) => v === i)) return false;   // must be exactly 0-15
+    board = arrangement.slice();
+    return true;
+  }
+
   // ---- public API ------------------------------------------------------
   return {
     N,
     CELLS,
     getBoard: () => board.slice(),   // copy, so callers can't mutate our state
+    setBoard,
     blankIndex,
     legalTargets,
     isAdjacent,
