@@ -1,102 +1,60 @@
-/* scores.js — the bridge between the game and the database.
- *
- * game.js knows nothing about PHP, and the PHP knows nothing about tiles.
- * This file is the only place the two vocabularies meet, so it is also the
- * only place that has to change if either side is renamed.
- *
- *   game.js speaks:   player      mode    moves   time
- *   the database:     player_name theme   moves   completion_time
- *
- * Load order matters: storage.js must come first (saveScoreLocal lives
- * there) and game.js must come after.
- *
- * Techniques used here, with W3Schools reference pages:
- *   fetch / POST      https://www.w3schools.com/js/js_api_fetch.asp
- *   async / await     https://www.w3schools.com/js/js_async.asp
- *   localStorage      https://www.w3schools.com/js/js_api_web_storage.asp
- *   try...catch       https://www.w3schools.com/js/js_errors.asp
- */
+// scores.js - connects the game to the database
+//
+// game.js uses player/mode/time, the database uses player_name/theme/
+// completion_time, so the names get swapped over here.
+//
+// Load after storage.js and before game.js.
+//
+// W3Schools pages used: fetch, async/await, try...catch.
 
 const Scores = {
 
-  /* Save one finished game.
-   * Tries MySQL first; falls back to localStorage if the server is down,
-   * unreachable, or reports a failure. Either way the player's score is
-   * kept, which is the behaviour the spec asks for.
-   *
-   * Returns { ok, data|error, storedLocally }
-   */
+  // Save a finished game. Uses the database, or localStorage if that fails.
   async save(result) {
-    const record = toDatabaseShape(result);
+    const record = {
+      player_name: String(result.player || "Anonymous").slice(0, 20),
+      theme: result.mode,
+      moves: result.moves,
+      completion_time: result.time
+    };
 
     try {
-      const response = await fetch('api/saveScore.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      const response = await fetch("api/saveScore.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams(record)
       });
 
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-
       const body = await response.json();
 
-      // saveScore.php answers 200 with {success:false} when the INSERT
-      // itself fails, so a successful request is not a successful save.
-      if (!body.success) throw new Error(body.message || 'save rejected');
+      // The page still loads when the insert fails, so check success too.
+      if (!body.success) throw new Error(body.message);
 
-      refreshLeaderboard();
-      return { ok: true, data: { storedLocally: false } };
+      loadLeaderboard();
+      return { ok: true };
 
     } catch (error) {
-      console.warn('Database save failed, keeping score locally:', error.message);
+      console.log("Database unavailable, saving locally.");
+
       saveScoreLocal(record);
-      refreshLeaderboard();
-      return { ok: true, data: { storedLocally: true } };
+      loadLeaderboard();
+
+      return { ok: true };
     }
   },
 
-  /* Read the ranked table. Same fallback path as save().
-   * Returns { ok, data: { scores: [...] } }
-   */
-  async top(mode, limit = 10) {
+  // Read the score table. Same fallback as above.
+  async top() {
     try {
-      const response = await fetch('api/getScores.php');
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-
+      const response = await fetch("api/getScores.php");
       const scores = await response.json();
-      if (!Array.isArray(scores)) throw new Error('unexpected response shape');
 
-      return { ok: true, data: { scores: scores.slice(0, limit) } };
+      return { ok: true, data: { scores: scores } };
 
     } catch (error) {
-      console.warn('Database read failed, using local scores:', error.message);
-      return { ok: true, data: { scores: getLocalScores().slice(0, limit) } };
+      console.log("Database unavailable, using local scores.");
+
+      return { ok: true, data: { scores: getLocalScores() } };
     }
   }
 };
-
-/* Translate a game result into the column names the table uses, and clean
- * the one field that came from a human. The player name reaches the page
- * again through innerHTML, so anything that looks like markup is stripped
- * here rather than trusted later.
- */
-function toDatabaseShape(result) {
-  const name = String(result.player ?? '')
-    .replace(/[<>&"']/g, '')
-    .trim()
-    .slice(0, 20);
-
-  return {
-    player_name:     name || 'Anonymous',
-    theme:           String(result.mode ?? 'tide'),
-    moves:           Math.max(0, Math.floor(Number(result.moves) || 0)),
-    completion_time: Math.max(0, Math.floor(Number(result.time) || 0))
-  };
-}
-
-/* Redraw the table after a save so the new score appears without a reload.
- * leaderboard.js owns the rendering; we only ask it to run again.
- */
-function refreshLeaderboard() {
-  if (typeof loadLeaderboard === 'function') loadLeaderboard();
-}

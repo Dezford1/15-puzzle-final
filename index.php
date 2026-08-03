@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="css/style.css">
 
-    <!-- The board tiles. Loaded second so it can build on style.css. -->
+    <!-- board tiles -->
     <link rel="stylesheet" href="css/tiles.css">
 </head>
 
@@ -170,7 +170,7 @@
 <script src="js/storage.js"></script>
 <script src="js/leaderboard.js"></script>
 
-<!-- Bridges game.js to the API. After storage.js, before game.js. -->
+<!-- connects the game to the score API -->
 <script src="js/scores.js"></script>
 
 <script src="js/puzzle.js"></script>

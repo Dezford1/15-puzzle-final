@@ -1,172 +1,162 @@
-/* puzzle.js — Person A
- *
- * Pure game state. No DOM, no fetch, no timers in here.
- * Keeping it pure means game.js can't corrupt the board, and you can
- * test any function straight from the browser console:
- *
- *     Puzzle.getBoard()
- *     Puzzle.moveBlank(1)     // slide blank right one column
- *     Puzzle.isSolved()
- *
- * Techniques used here, with W3Schools reference pages:
- *   Arrays                https://www.w3schools.com/js/js_arrays.asp
- *   indexOf               https://www.w3schools.com/jsref/jsref_indexof_array.asp
- *   every                 https://www.w3schools.com/jsref/jsref_every.asp
- *   Math.random / floor   https://www.w3schools.com/js/js_random.asp
- *   Arrow functions       https://www.w3schools.com/js/js_arrow_function.asp
- */
+// puzzle.js - the board and the rules
+//
+// The board is one array of 16 numbers. 0 is the empty square.
+// Index 0 is top left, index 15 is bottom right.
+//
+// W3Schools pages used: Arrays, indexOf, Math.random, arrow functions.
 
 const Puzzle = (function () {
-  const N = 4;                 // 4x4 grid
-  const CELLS = N * N;         // 16 squares
+  const N = 4;
+  const CELLS = 16;
 
-  // The goal state. 0 represents the empty square.
-  const SOLVED = Array.from({ length: CELLS - 1 }, (_, i) => i + 1).concat(0);
+  const SOLVED = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0];
 
-  // board[index] = tile number sitting at that index. 0 = the blank.
-  // Index 0 is top-left, index 15 is bottom-right.
   let board = SOLVED.slice();
 
-  // ---- geometry -------------------------------------------------------
-  // Flat index -> row/column. This is why a flat array beats a 2D one:
-  // the math is two operations and the win check is one line.
-  const rowOf = i => Math.floor(i / N);
-  const colOf = i => i % N;
-
-  function isAdjacent(a, b) {
-    const sameRow = rowOf(a) === rowOf(b) && Math.abs(colOf(a) - colOf(b)) === 1;
-    const sameCol = colOf(a) === colOf(b) && Math.abs(rowOf(a) - rowOf(b)) === 1;
-    return sameRow || sameCol;
+  // Turn an index into a row and column.
+  function rowOf(i) {
+    return Math.floor(i / N);
   }
 
-  const blankIndex = () => board.indexOf(0);
+  function colOf(i) {
+    return i % N;
+  }
 
-  // Every index the blank could legally swap into right now (2, 3, or 4 of them).
+  // Two squares are next to each other if they share a row or a column
+  // and are one step apart.
+  function isAdjacent(a, b) {
+    if (rowOf(a) === rowOf(b) && Math.abs(colOf(a) - colOf(b)) === 1) {
+      return true;
+    }
+
+    if (colOf(a) === colOf(b) && Math.abs(rowOf(a) - rowOf(b)) === 1) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function blankIndex() {
+    return board.indexOf(0);
+  }
+
+  // All the squares the empty space can move to right now.
   function legalTargets() {
     const b = blankIndex();
-    const out = [];
-    if (rowOf(b) > 0)     out.push(b - N);   // up
-    if (rowOf(b) < N - 1) out.push(b + N);   // down
-    if (colOf(b) > 0)     out.push(b - 1);   // left
-    if (colOf(b) < N - 1) out.push(b + 1);   // right
-    return out;
+    const targets = [];
+
+    if (rowOf(b) > 0) targets.push(b - N);
+    if (rowOf(b) < N - 1) targets.push(b + N);
+    if (colOf(b) > 0) targets.push(b - 1);
+    if (colOf(b) < N - 1) targets.push(b + 1);
+
+    return targets;
   }
 
-  // ---- moves ----------------------------------------------------------
-  // The ONE rule of the whole game: swap the blank with an adjacent square.
-  // Returns true if the move was legal and happened.
+  // The only move in the game: swap the empty space with a neighbour.
   function moveBlankTo(index) {
     if (index < 0 || index >= CELLS) return false;
+
     const b = blankIndex();
     if (!isAdjacent(index, b)) return false;
-    [board[b], board[index]] = [board[index], board[b]];
+
+    board[b] = board[index];
+    board[index] = 0;
+
     return true;
   }
 
   function isSolved() {
-    return board.every((tile, i) => tile === SOLVED[i]);
-  }
-
-  // ---- shuffle ---------------------------------------------------------
-  // Scramble the board so it is ALWAYS solvable.
-  //
-  // Deliberately NOT a random shuffle of the array. Exactly half of the 16!
-  // possible arrangements can never be solved, so shuffling directly would
-  // hand the player an impossible board about half the time.
-  //
-  // Instead we start from the solved board and walk away from it using only
-  // moves the player is allowed to make. Anything reachable that way is
-  // reachable back, so the result is solvable by construction. This is why
-  // the spec specifies "Shuffle Moves: 240".
-  function shuffle(steps = 240) {
-    board = SOLVED.slice();
-
-    // Where the blank sat one step ago. Without this the walk keeps
-    // undoing itself — left, right, left, right — and barely scrambles.
-    let previous = -1;
-
-    for (let step = 0; step < steps; step++) {
-      const from = blankIndex();
-
-      let options = legalTargets().filter(i => i !== previous);
-      // A corner has only 2 exits; if one was the way back, take what's left.
-      if (options.length === 0) options = legalTargets();
-
-      const target = options[Math.floor(Math.random() * options.length)];
-      previous = from;
-      moveBlankTo(target);
+    for (let i = 0; i < CELLS; i++) {
+      if (board[i] !== SOLVED[i]) return false;
     }
 
-    // Astronomically unlikely at 240 steps, but a shuffle that hands back
-    // the solved board is still a bug.
-    if (isSolved()) shuffle(steps);
-  }
-
-  // ---- magic -----------------------------------------------------------
-  // The assist, limited to 3 uses (see CONFIG in game.js).
-  //
-  // Walk the tiles in order and fix the first one that is out of place:
-  // put it in its home square, and send whatever was squatting there back
-  // to where the tile came from.
-  //
-  // This is a teleport, not a slide, so it deliberately ignores
-  // isAdjacent. That is exactly why it is capped at 3 uses.
-  //
-  // It fixes TWO tiles per use, and that is not generosity — it is required.
-  // Swapping any two tiles flips the puzzle's solvability, so a single
-  // teleport would hand the player a board they can never finish. A second
-  // swap flips it back. The blank is left alone for the same reason: moving
-  // it changes the parity too.
-  //
-  // Returns false only when there is nothing left to fix.
-  function magic() {
-    if (!teleportLowestMisplaced()) return false;  // nothing was wrong
-    teleportLowestMisplaced();                     // restores solvability
     return true;
   }
 
-  // Send the lowest-numbered out-of-place tile to its home square, and
-  // whatever was sitting there back to where that tile came from.
-  function teleportLowestMisplaced() {
-    for (let tile = 1; tile < CELLS; tile++) {
-      const home = tile - 1;              // tile 1 lives at index 0, and so on
-      if (board[home] === tile) continue; // already correct, try the next
-      if (board[home] === 0) continue;    // never disturb the blank
-
-      const current = board.indexOf(tile);
-      [board[home], board[current]] = [board[current], board[home]];
-      return true;
-    }
-    return false;
-  }
-
-  // Restore a previously captured arrangement (used by the Reset button,
-  // so the player can retry the same puzzle instead of a brand new one).
-  // Validated, because silently accepting a malformed array would produce
-  // a board that looks fine but can never be solved.
+  // Used by the Reset button to put back an earlier arrangement.
   function setBoard(arrangement) {
-    if (!Array.isArray(arrangement) || arrangement.length !== CELLS) return false;
-    const sorted = [...arrangement].sort((a, b) => a - b);
-    if (!sorted.every((v, i) => v === i)) return false;   // must be exactly 0-15
+    if (!Array.isArray(arrangement) || arrangement.length !== CELLS) {
+      return false;
+    }
+
     board = arrangement.slice();
     return true;
   }
 
-  // ---- public API ------------------------------------------------------
+  // Scramble by making random legal moves from the solved board.
+  //
+  // Shuffling the array directly does not work - half of all the possible
+  // arrangements of a 15 puzzle cannot be solved. Making real moves means
+  // the player can always undo them, so the board is always solvable.
+  //
+  // previous stops the empty space from going straight back where it came
+  // from, which would just undo the last move over and over.
+  function shuffle(steps) {
+    board = SOLVED.slice();
+
+    let previous = -1;
+
+    for (let i = 0; i < steps; i++) {
+      const from = blankIndex();
+
+      let options = legalTargets().filter(t => t !== previous);
+      if (options.length === 0) options = legalTargets();
+
+      const pick = options[Math.floor(Math.random() * options.length)];
+
+      previous = from;
+      moveBlankTo(pick);
+    }
+
+    if (isSolved()) shuffle(steps);
+  }
+
+  // The Magic button. Sends the lowest tile that is out of place back to
+  // its home square, and whatever was there goes the other way.
+  //
+  // It has to fix two tiles, not one. Swapping a single pair of tiles turns
+  // a solvable board into an unsolvable one, so a second swap is needed to
+  // put that right.
+  function magic() {
+    if (!fixLowestTile()) return false;
+
+    fixLowestTile();
+    return true;
+  }
+
+  function fixLowestTile() {
+    for (let tile = 1; tile < CELLS; tile++) {
+      const home = tile - 1;
+
+      if (board[home] === tile) continue;
+      if (board[home] === 0) continue;
+
+      const current = board.indexOf(tile);
+
+      board[current] = board[home];
+      board[home] = tile;
+
+      return true;
+    }
+
+    return false;
+  }
+
   return {
-    N,
-    CELLS,
-    getBoard: () => board.slice(),   // copy, so callers can't mutate our state
-    setBoard,
-    blankIndex,
-    legalTargets,
-    isAdjacent,
-    moveBlankTo,
-    isSolved,
-    shuffle,
-    magic,
-    rowOf,
-    colOf,
+    N: N,
+    CELLS: CELLS,
+    getBoard: () => board.slice(),
+    setBoard: setBoard,
+    blankIndex: blankIndex,
+    legalTargets: legalTargets,
+    isAdjacent: isAdjacent,
+    moveBlankTo: moveBlankTo,
+    isSolved: isSolved,
+    shuffle: shuffle,
+    magic: magic,
+    rowOf: rowOf,
+    colOf: colOf,
     homeIndexOf: tile => tile - 1
   };
 })();

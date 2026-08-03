@@ -1,86 +1,77 @@
-/* game.js — Person A
- *
- * Everything the player touches: rendering, input, timer, move counter.
- * All board logic lives in puzzle.js — this file only asks it to move.
- *
- * Techniques used here, with W3Schools reference pages:
- *   addEventListener      https://www.w3schools.com/jsref/met_document_addeventlistener.asp
- *   setInterval           https://www.w3schools.com/jsref/met_win_setinterval.asp
- *   createElement         https://www.w3schools.com/jsref/met_document_createelement.asp
- *   dataset (data-*)      https://www.w3schools.com/jsref/prop_html_dataset.asp
- *   keydown / event.key   https://www.w3schools.com/jsref/event_key_key.asp
- *   Promises              https://www.w3schools.com/js/js_promise.asp
- */
+// game.js - the page side of the puzzle
+//
+// Handles drawing the tiles, the buttons, the timer and the move counter.
+// All the board rules are in puzzle.js.
+//
+// W3Schools pages used: addEventListener, setInterval, createElement,
+// dataset, event.key.
 
-const CONFIG = {
-  difficulty:   'normal',
-  magicUses:    3,
-  shuffleMoves: 240
-};
+const MAGIC_USES = 3;
+const SHUFFLE_MOVES = 240;
+const DIFFICULTY = "normal";
 
-const el = {
-  board:     document.getElementById('board'),
-  mode:      document.getElementById('mode'),
-  shuffle:   document.getElementById('shuffle'),
-  reset:     document.getElementById('reset'),
-  magic:     document.getElementById('magic'),
-  magicLeft: document.getElementById('magic-left'),
-  moves:     document.getElementById('moves'),
-  time:      document.getElementById('time'),
-  status:    document.getElementById('status')
-};
+const boardEl = document.getElementById("board");
+const modeEl = document.getElementById("mode");
+const shuffleEl = document.getElementById("shuffle");
+const resetEl = document.getElementById("reset");
+const magicEl = document.getElementById("magic");
+const magicLeftEl = document.getElementById("magic-left");
+const movesEl = document.getElementById("moves");
+const timeEl = document.getElementById("time");
+const statusEl = document.getElementById("status");
 
-let moves      = 0;
-let magicLeft  = CONFIG.magicUses;
-let openingBoard = null;  // snapshot of the shuffle, so Reset can replay it
-let startTime  = null;    // null until the first move
-let tickHandle = null;
-let finished   = false;
+let moves = 0;
+let magicLeft = MAGIC_USES;
+let startTime = null;
+let timer = null;
+let finished = false;
+let openingBoard = null;
 
-// ---- rendering ---------------------------------------------------------
-// Rebuilt from the array every time. Render stays a pure function of state,
-// so the screen can never disagree with the board.
+// Draw all 16 squares from the array.
 function render() {
   const board = Puzzle.getBoard();
-  el.board.innerHTML = '';
 
-  board.forEach((tile, index) => {
-    const cell = document.createElement('button');
-    cell.type = 'button';
-    cell.dataset.index = index;
+  boardEl.innerHTML = "";
+
+  for (let i = 0; i < board.length; i++) {
+    const tile = board[i];
+    const cell = document.createElement("button");
+
+    cell.type = "button";
+    cell.dataset.index = i;
 
     if (tile === 0) {
-      cell.className = 'tile blank';
-      cell.setAttribute('aria-label', 'Empty square');
+      cell.className = "tile blank";
       cell.disabled = true;
+      cell.setAttribute("aria-label", "Empty square");
     } else {
-      const home = index === Puzzle.homeIndexOf(tile);
-      cell.className = 'tile' + (home ? ' home' : '');
+      cell.className = "tile";
       cell.textContent = tile;
-      cell.setAttribute('aria-label', `Tile ${tile}`);
+      cell.setAttribute("aria-label", "Tile " + tile);
 
-      // For image modes: show the slice of the picture this tile owns.
-      // Person B supplies the actual image via CSS background-image.
-      const h = Puzzle.homeIndexOf(tile);
-      const pct = 100 / (Puzzle.N - 1);
+      if (i === Puzzle.homeIndexOf(tile)) {
+        cell.className = "tile home";
+      }
+
+      // Each tile shows its own part of the theme picture.
+      const home = Puzzle.homeIndexOf(tile);
+      const step = 100 / (Puzzle.N - 1);
       cell.style.backgroundPosition =
-        `${Puzzle.colOf(h) * pct}% ${Puzzle.rowOf(h) * pct}%`;
+        Puzzle.colOf(home) * step + "% " + Puzzle.rowOf(home) * step + "%";
     }
 
-    el.board.appendChild(cell);
-  });
+    boardEl.appendChild(cell);
+  }
 
-  el.moves.textContent = moves;
-  el.magicLeft.textContent = magicLeft;
-  el.magic.disabled = magicLeft === 0 || finished;
+  movesEl.textContent = moves;
+  magicLeftEl.textContent = magicLeft;
+  magicEl.disabled = magicLeft === 0 || finished;
 }
 
-// ---- the single funnel for every move ----------------------------------
-// Clicks, keys, and drags all end up here. One place to count moves,
-// one place to check for a win.
+// Clicks, arrow keys and dragging all come through here.
 function attemptMove(index) {
   if (finished) return;
-  if (!Puzzle.moveBlankTo(index)) return;   // illegal move, ignore silently
+  if (!Puzzle.moveBlankTo(index)) return;
 
   moves++;
   startTimer();
@@ -90,122 +81,137 @@ function attemptMove(index) {
 
 function checkWin() {
   if (!Puzzle.isSolved()) return;
+
   finished = true;
   stopTimer();
-  el.status.textContent = `Solved in ${moves} moves!`;
+  statusEl.textContent = "Solved in " + moves + " moves!";
 
-  // The only call into Person B's code. Contract:
-  //   Scores.save({player, mode, moves, time, difficulty}) -> Promise<{ok}>
+  const name = window.prompt("Your name for the leaderboard:");
+
   Scores.save({
-    player:     window.prompt('Your name for the leaderboard:') || 'Anonymous',
-    mode:       el.mode.value,
-    moves:      moves,
-    time:       elapsedSeconds(),
-    difficulty: CONFIG.difficulty
+    player: name || "Anonymous",
+    mode: modeEl.value,
+    moves: moves,
+    time: elapsedSeconds(),
+    difficulty: DIFFICULTY
   });
 }
 
-// ---- timer -------------------------------------------------------------
-const elapsedSeconds = () =>
-  startTime === null ? 0 : Math.floor((Date.now() - startTime) / 1000);
+// ---- timer ----
 
-function formatTime(total) {
-  const m = Math.floor(total / 60);
-  const s = String(total % 60).padStart(2, '0');
-  return `${m}:${s}`;
+function elapsedSeconds() {
+  if (startTime === null) return 0;
+
+  return Math.floor((Date.now() - startTime) / 1000);
 }
 
-// Starts on the first real move, not on page load.
+function formatTime(total) {
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+
+  return minutes + ":" + String(seconds).padStart(2, "0");
+}
+
+// Starts on the first move, not when the page loads.
 function startTimer() {
   if (startTime !== null) return;
+
   startTime = Date.now();
-  tickHandle = setInterval(() => {
-    el.time.textContent = formatTime(elapsedSeconds());
+
+  timer = setInterval(function () {
+    timeEl.textContent = formatTime(elapsedSeconds());
   }, 250);
 }
 
 function stopTimer() {
-  clearInterval(tickHandle);
-  tickHandle = null;
+  clearInterval(timer);
+  timer = null;
 }
 
 function resetTimer() {
   stopTimer();
   startTime = null;
-  el.time.textContent = '0:00';
+  timeEl.textContent = "0:00";
 }
 
-// ---- input -------------------------------------------------------------
-// Click a square to move the blank there.
-el.board.addEventListener('click', e => {
-  const cell = e.target.closest('.tile');
+// ---- input ----
+
+boardEl.addEventListener("click", function (e) {
+  const cell = e.target.closest(".tile");
   if (cell) attemptMove(Number(cell.dataset.index));
 });
 
-// Hold and drag: the blank follows the cursor. Bonus layer only —
-// clicking and arrow keys must keep working for accessibility.
+// Hold the mouse down and drag to slide several tiles in a row.
 let dragging = false;
-el.board.addEventListener('mousedown', () => { dragging = true; });
-document.addEventListener('mouseup',   () => { dragging = false; });
-el.board.addEventListener('mouseover', e => {
+
+boardEl.addEventListener("mousedown", function () {
+  dragging = true;
+});
+
+document.addEventListener("mouseup", function () {
+  dragging = false;
+});
+
+boardEl.addEventListener("mouseover", function (e) {
   if (!dragging) return;
-  const cell = e.target.closest('.tile');
+
+  const cell = e.target.closest(".tile");
   if (cell) attemptMove(Number(cell.dataset.index));
 });
 
-// Arrow keys drive the BLANK, not the tiles.
-// Right arrow = the empty square moves right, tile there slides left.
-document.addEventListener('keydown', e => {
-  const delta = {
-    ArrowUp:    -Puzzle.N,
-    ArrowDown:   Puzzle.N,
-    ArrowLeft:  -1,
-    ArrowRight:  1
-  }[e.key];
-  if (delta === undefined) return;
-  e.preventDefault();
+// Arrow keys move the empty space, so pressing right moves it right.
+document.addEventListener("keydown", function (e) {
+  let delta;
 
-  const target = Puzzle.blankIndex() + delta;
-  // moveBlankTo rejects wrap-around (e.g. right edge -> next row) for us.
-  attemptMove(target);
+  if (e.key === "ArrowUp") delta = -Puzzle.N;
+  else if (e.key === "ArrowDown") delta = Puzzle.N;
+  else if (e.key === "ArrowLeft") delta = -1;
+  else if (e.key === "ArrowRight") delta = 1;
+  else return;
+
+  e.preventDefault();
+  attemptMove(Puzzle.blankIndex() + delta);
 });
 
-// ---- buttons -----------------------------------------------------------
-// Shuffle = a brand new puzzle. Reset = another attempt at the same one,
-// so a player can compare their move count on identical starting tiles.
-el.shuffle.addEventListener('click', newGame);
+// ---- buttons ----
 
-el.reset.addEventListener('click', () => {
+// Shuffle gives a new puzzle, Reset gives another go at the same one.
+shuffleEl.addEventListener("click", newGame);
+
+resetEl.addEventListener("click", function () {
   if (!openingBoard) return;
+
   Puzzle.setBoard(openingBoard);
   clearStats();
   render();
 });
 
-el.magic.addEventListener('click', () => {
+magicEl.addEventListener("click", function () {
   if (finished || magicLeft === 0) return;
   if (!Puzzle.magic()) return;
+
   magicLeft--;
   render();
   checkWin();
 });
 
-el.mode.addEventListener('change', () => {
-  el.board.className = 'board mode-' + el.mode.value;
+modeEl.addEventListener("change", function () {
+  boardEl.className = "board mode-" + modeEl.value;
 });
 
-// ---- lifecycle ---------------------------------------------------------
+// ---- start ----
+
 function clearStats() {
-  moves     = 0;
-  magicLeft = CONFIG.magicUses;
-  finished  = false;
-  el.status.textContent = '';
+  moves = 0;
+  magicLeft = MAGIC_USES;
+  finished = false;
+  statusEl.textContent = "";
   resetTimer();
 }
 
 function newGame() {
-  Puzzle.shuffle(CONFIG.shuffleMoves);
-  openingBoard = Puzzle.getBoard();   // remember it so Reset can restore it
+  Puzzle.shuffle(SHUFFLE_MOVES);
+  openingBoard = Puzzle.getBoard();
   clearStats();
   render();
 }
