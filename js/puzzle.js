@@ -102,20 +102,41 @@ const Puzzle = (function () {
     if (isSolved()) shuffle(steps);
   }
 
-  // ---- TODO #2: magic --------------------------------------------------
-  // The assist. Limited to 3 uses (see CONFIG in game.js).
+  // ---- magic -----------------------------------------------------------
+  // The assist, limited to 3 uses (see CONFIG in game.js).
   //
-  // Simplest version that satisfies "difficulty-aware assist":
-  //   - find the lowest-numbered tile that is NOT in its home square
-  //   - swap it with whatever tile is currently sitting in its home square
-  //   - return true if something was fixed, false if already solved
+  // Walk the tiles in order and fix the first one that is out of place:
+  // put it in its home square, and send whatever was squatting there back
+  // to where the tile came from.
   //
-  // Note this is a teleport, not a slide, so it deliberately ignores
-  // isAdjacent. That is exactly why it's capped at 3 uses.
+  // This is a teleport, not a slide, so it deliberately ignores
+  // isAdjacent. That is exactly why it is capped at 3 uses.
   //
-  // Tile n belongs at index n - 1.
+  // It fixes TWO tiles per use, and that is not generosity — it is required.
+  // Swapping any two tiles flips the puzzle's solvability, so a single
+  // teleport would hand the player a board they can never finish. A second
+  // swap flips it back. The blank is left alone for the same reason: moving
+  // it changes the parity too.
+  //
+  // Returns false only when there is nothing left to fix.
   function magic() {
-    // TODO: implement
+    if (!teleportLowestMisplaced()) return false;  // nothing was wrong
+    teleportLowestMisplaced();                     // restores solvability
+    return true;
+  }
+
+  // Send the lowest-numbered out-of-place tile to its home square, and
+  // whatever was sitting there back to where that tile came from.
+  function teleportLowestMisplaced() {
+    for (let tile = 1; tile < CELLS; tile++) {
+      const home = tile - 1;              // tile 1 lives at index 0, and so on
+      if (board[home] === tile) continue; // already correct, try the next
+      if (board[home] === 0) continue;    // never disturb the blank
+
+      const current = board.indexOf(tile);
+      [board[home], board[current]] = [board[current], board[home]];
+      return true;
+    }
     return false;
   }
 
