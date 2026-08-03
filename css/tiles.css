@@ -6,9 +6,11 @@
  *
  * game.js generates one <button class="tile"> per square and sets each
  * one's background-position inline, so every tile shows its own slice of
- * a single scene spread across the whole board. Same trick a photo would
- * use — swap the background-image below for url("../assets/themes/x.jpg")
- * and nothing else has to change.
+ * a single photograph spread across the whole board. Solving the puzzle
+ * reassembles the picture.
+ *
+ * To use different photos, replace the files in assets/themes/ — square
+ * images, same filenames. No CSS or JavaScript changes needed.
  *
  * Numbers stay visible in every theme. They sit on a soft dark scrim so
  * they stay readable over the artwork rather than disappearing into it.
@@ -97,36 +99,42 @@
 }
 
 /* ==========================================
-   THEME: TIDE
-   Deep water to shallow surf, light coming from the top left.
+   THEMES
+
+   Each theme is one 800x800 photograph spread across all 16 tiles.
+   Two background layers per tile:
+
+     1. a flat dark wash, listed first so it sits on top of the photo.
+        It is a solid colour written as a gradient, which means the
+        inline background-position from game.js cannot shift it — the
+        wash stays even while the photo underneath slides.
+     2. the photograph itself.
+
+   The background-color is a fallback: if an image ever fails to load,
+   the tile shows a colour from that photo rather than going blank.
+
+   Photos are CC0 (public domain) from StockSnap — see CREDITS.md.
 ========================================== */
 
 .mode-tide .tile {
+  background-color: #7fb4cc;
   background-image:
-    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.55), transparent 45%),
-    linear-gradient(160deg, #023e8a 0%, #0077b6 38%, #00b4d8 68%, #90e0ef 100%);
+    linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)),
+    url("../assets/themes/tide.jpg");
 }
-
-/* ==========================================
-   THEME: BREEZE
-   Palm greens dropping into warm sand along the bottom.
-========================================== */
 
 .mode-breeze .tile {
+  background-color: #5c8fa8;
   background-image:
-    radial-gradient(circle at 78% 22%, rgba(255, 255, 255, 0.4), transparent 42%),
-    linear-gradient(170deg, #1b7f5f 0%, #2a9d8f 34%, #83c5be 62%, #e9d8a6 100%);
+    linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)),
+    url("../assets/themes/breeze.jpg");
 }
 
-/* ==========================================
-   THEME: SUN
-   Late afternoon: amber overhead falling to coral at the horizon.
-========================================== */
-
 .mode-sun .tile {
+  background-color: #6b5f7a;
   background-image:
-    radial-gradient(circle at 30% 15%, rgba(255, 255, 255, 0.6), transparent 40%),
-    linear-gradient(175deg, #ffd166 0%, #f4a261 40%, #e76f51 74%, #c1442e 100%);
+    linear-gradient(rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.34)),
+    url("../assets/themes/sun.jpg");
 }
 
 /* ==========================================
