@@ -11,6 +11,9 @@
     <title>Fifteen Puzzle</title>
 
     <link rel="stylesheet" href="css/style.css">
+
+    <!-- The board tiles. Loaded second so it can build on style.css. -->
+    <link rel="stylesheet" href="css/tiles.css">
 </head>
 
 <body>
